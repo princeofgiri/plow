@@ -46,14 +46,14 @@ var (
 	reqWriteTimeout  = kingpin.Flag("req-timeout", "Timeout for full request writing").PlaceHolder("DURATION").Duration()
 	respReadTimeout  = kingpin.Flag("resp-timeout", "Timeout for full response reading").PlaceHolder("DURATION").Duration()
 	socks5           = kingpin.Flag("socks5", "Socks5 proxy").PlaceHolder("ip:port").String()
-	httpProxy        = kingpin.Flag("http-proxy","Set HTTP proxy").PlaceHolder("username:password@ip:port").String()
+	httpProxy        = kingpin.Flag("http-proxy", "Set HTTP proxy").PlaceHolder("username:password@ip:port").String()
 
 	autoOpenBrowser = kingpin.Flag("auto-open-browser", "Specify whether auto open browser to show web charts").Bool()
 	clean           = kingpin.Flag("clean", "Clean the histogram bar once its finished. Default is true").Default("true").NegatableBool()
 	outputErrors    = kingpin.Flag("output-errors", "Output errors to file").String()
 	summary         = kingpin.Flag("summary", "Only print the summary without realtime reports").Default("false").Bool()
 	pprofAddr       = kingpin.Flag("pprof", "Enable pprof at special address").Hidden().String()
-	url             = kingpin.Arg("url", "Request url").Required().String()
+	url             = kingpin.Arg("url", "Request url (optional — omit to launch GUI mode)").String()
 	unixSocket      = kingpin.Flag("unix-socket", "Unix domain socket path to use for connection").String()
 )
 
@@ -94,6 +94,7 @@ var CompactUsageTemplate = `{{define "FormatCommand" -}}
 {{end -}}
 Examples:
 
+  plow                                           (GUI mode — opens browser)
   plow http://127.0.0.1:8080/ -c 20 -n 100000
   plow https://httpbin.org/post -c 20 -d 5m --body @file.json -T 'application/json' -m POST
 
@@ -189,6 +190,30 @@ func main() {
 		Help = `A high-performance HTTP benchmarking tool with real-time web UI and terminal displaying`
 	kingpin.Parse()
 
+	if *pprofAddr != "" {
+		go http.ListenAndServe(*pprofAddr, nil)
+	}
+
+	// ── GUI MODE ──────────────────────────────────────────────
+	// When no URL argument is given, launch the web-based benchmark GUI.
+	if *url == "" {
+		listenAddr := *chartsListenAddr
+		if listenAddr == "" {
+			listenAddr = ":18888"
+		}
+		ln, err := net.Listen("tcp", listenAddr)
+		if err != nil {
+			errAndExit(err.Error())
+			return
+		}
+
+		gui := NewGUIServer(ln)
+		// Only open browser if user explicitly passes --auto-open-browser
+		gui.Serve(*autoOpenBrowser)
+		return
+	}
+
+	// ── CLI MODE ──────────────────────────────────────────────
 	if *requests >= 0 && *requests < int64(*concurrency) {
 		errAndExit("requests must greater than or equal concurrency")
 		return
@@ -196,10 +221,6 @@ func main() {
 	if (*cert != "" && *key == "") || (*cert == "" && *key != "") {
 		errAndExit("must specify cert and key at the same time")
 		return
-	}
-
-	if *pprofAddr != "" {
-		go http.ListenAndServe(*pprofAddr, nil)
 	}
 
 	var err error

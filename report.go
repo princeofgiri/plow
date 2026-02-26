@@ -284,6 +284,8 @@ func (s *StreamReport) Done() <-chan struct{} {
 
 type ChartsReport struct {
 	RPS         float64
+	AvgRPS      float64
+	MaxRPS      float64
 	Latency     Stats
 	CodeMap     map[int]int64
 	Concurrency int
@@ -297,6 +299,8 @@ func (s *StreamReport) Charts() *ChartsReport {
 	} else {
 		cr = &ChartsReport{
 			RPS:         s.rpsWithinSec,
+			AvgRPS:      s.rpsStats.Mean(),
+			MaxRPS:      s.rpsStats.max,
 			Latency:     *s.latencyWithinSec,
 			CodeMap:     s.copyCodes(),
 			Concurrency: s.concurrencyCount,
