@@ -24,11 +24,13 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-    # -
-    #   name: Tests
-    #   run: |
-    #     go mod tidy
-    #     go test -v ./...
+      - name: Build
+        run: go build -v -o plow .
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plow-${{ runner.os }}-${{ github.sha }}
+          path: plow
       - name: Docker Login
         uses: docker/login-action@v3
         with:
