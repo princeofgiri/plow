@@ -194,9 +194,12 @@ func (g *GUIServer) handleChartData(ctx *fasthttp.RequestCtx, view string) {
 		switch view {
 		case latencyView:
 			if rd != nil {
+				// 3 nilai pertama: untuk grafik realtime (per-detik window)
 				values = append(values, rd.Latency.min/1e6, rd.Latency.Mean()/1e6, rd.Latency.max/1e6)
+				// 3 nilai berikutnya: untuk stat cards (kumulatif seluruh sesi)
+				values = append(values, rd.OverallLatency.min/1e6, rd.OverallLatency.Mean()/1e6, rd.OverallLatency.max/1e6)
 			} else {
-				values = append(values, nil, nil, nil)
+				values = append(values, nil, nil, nil, nil, nil, nil)
 			}
 		case rpsView:
 			if rd != nil {
@@ -220,7 +223,7 @@ func (g *GUIServer) handleChartData(ctx *fasthttp.RequestCtx, view string) {
 	} else {
 		switch view {
 		case latencyView:
-			values = append(values, nil, nil, nil)
+			values = append(values, nil, nil, nil, nil, nil, nil)
 		case rpsView:
 			values = append(values, nil, nil, nil)
 		default:
@@ -646,11 +649,13 @@ async function fetchView(view){
     const t = d.time, v = d.values;
 
     if(view==='latency'){
-      const [mn,mean,mx] = [v[0],v[1],v[2]];
+      const [mn,mean,mx, mnAll,meanAll,mxAll] = [v[0],v[1],v[2], v[3],v[4],v[5]];
+      // grafik realtime menggunakan nilai per-detik window
       updateLatency(t, mn, mean, mx);
-      setText('vLat', mean!=null ? mean.toFixed(2) : '—');
-      setText('vMin', mn  !=null ? mn.toFixed(2)   : '—');
-      setText('vMax', mx  !=null ? mx.toFixed(2)   : '—');
+      // stat cards menggunakan nilai kumulatif seluruh sesi
+      setText('vLat', meanAll!=null ? meanAll.toFixed(2) : '—');
+      setText('vMin', mnAll  !=null ? mnAll.toFixed(2)   : '—');
+      setText('vMax', mxAll  !=null ? mxAll.toFixed(2)   : '—');
     } else if(view==='rps'){
       const [cur, avg, mx] = [v[0], v[1], v[2]];
       updateRps(t, cur);

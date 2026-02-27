@@ -283,12 +283,13 @@ func (s *StreamReport) Done() <-chan struct{} {
 }
 
 type ChartsReport struct {
-	RPS         float64
-	AvgRPS      float64
-	MaxRPS      float64
-	Latency     Stats
-	CodeMap     map[int]int64
-	Concurrency int
+	RPS            float64
+	AvgRPS         float64
+	MaxRPS         float64
+	Latency        Stats // latency dalam 1 detik terakhir (untuk grafik realtime)
+	OverallLatency Stats // latency kumulatif seluruh sesi (untuk stat cards)
+	CodeMap        map[int]int64
+	Concurrency    int
 }
 
 func (s *StreamReport) Charts() *ChartsReport {
@@ -298,12 +299,13 @@ func (s *StreamReport) Charts() *ChartsReport {
 		cr = nil
 	} else {
 		cr = &ChartsReport{
-			RPS:         s.rpsWithinSec,
-			AvgRPS:      s.rpsStats.Mean(),
-			MaxRPS:      s.rpsStats.max,
-			Latency:     *s.latencyWithinSec,
-			CodeMap:     s.copyCodes(),
-			Concurrency: s.concurrencyCount,
+			RPS:            s.rpsWithinSec,
+			AvgRPS:         s.rpsStats.Mean(),
+			MaxRPS:         s.rpsStats.max,
+			Latency:        *s.latencyWithinSec,
+			OverallLatency: *s.latencyStats,
+			CodeMap:        s.copyCodes(),
+			Concurrency:    s.concurrencyCount,
 		}
 	}
 	s.lock.Unlock()
