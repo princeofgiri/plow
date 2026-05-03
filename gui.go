@@ -31,6 +31,7 @@ type BenchmarkRequest struct {
 	Concurrency int    `json:"concurrency"`
 	Duration    int    `json:"duration"` // seconds
 	Method      string `json:"method"`
+	Insecure    bool   `json:"insecure"`
 }
 
 // BenchmarkStatus is returned to the web UI
@@ -126,6 +127,7 @@ func (g *GUIServer) handleStart(ctx *fasthttp.RequestCtx) {
 		url:      req.URL,
 		method:   req.Method,
 		maxConns: req.Concurrency,
+		insecure: req.Insecure,
 	}
 
 	dur := time.Duration(req.Duration) * time.Second
@@ -286,7 +288,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .cfg{padding:28px 28px 24px;margin-bottom:24px}
 .cfg-title{font-size:15px;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:8px}
 .cfg-title::before{content:'⚙️';font-size:17px}
-.form-grid{display:grid;grid-template-columns:1fr 120px 120px 120px auto;gap:14px;align-items:end}
+.form-grid{display:grid;grid-template-columns:1fr 100px 100px 100px 100px auto;gap:14px;align-items:end}
 @media(max-width:860px){.form-grid{grid-template-columns:1fr 1fr}.btn-grp{grid-column:1/-1}}
 .fg{display:flex;flex-direction:column;gap:7px}
 .lbl{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
@@ -378,6 +380,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           <option>GET</option><option>POST</option><option>PUT</option>
           <option>DELETE</option><option>PATCH</option><option>HEAD</option>
         </select>
+      </div>
+      <div class="fg">
+        <label class="lbl" for="iIns">Insecure</label>
+        <div style="height:41px;display:flex;align-items:center;justify-content:center;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rs);">
+          <input id="iIns" type="checkbox" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)" />
+        </div>
       </div>
       <div class="btn-grp">
         <button class="btn btn-run" id="btnRun" onclick="startBench()">▶ Run Benchmark</button>
@@ -578,6 +586,7 @@ async function startBench(){
   const conc = parseInt(document.getElementById('iConc').value)||10;
   const dur  = parseInt(document.getElementById('iDur').value)||10;
   const meth = document.getElementById('iMeth').value;
+  const ins  = document.getElementById('iIns').checked;
 
   if(!url){ addLog('er','Please enter a target URL'); document.getElementById('iUrl').focus(); return; }
   try{ new URL(url); } catch{ addLog('er','Invalid URL — must start with http:// or https://'); return; }
@@ -587,7 +596,7 @@ async function startBench(){
 
   try{
     const r = await fetch('/start',{ method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({url,concurrency:conc,duration:dur,method:meth}) });
+      body: JSON.stringify({url,concurrency:conc,duration:dur,method:meth,insecure:ins}) });
     const d = await r.json();
     if(!r.ok){ addLog('er','Error: '+(d.error||r.statusText)); return; }
     setRunning(true);
